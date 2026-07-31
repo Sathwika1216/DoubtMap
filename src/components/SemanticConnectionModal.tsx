@@ -1,5 +1,15 @@
 import React from 'react';
-import { X, Sparkles, Network, ArrowRight, Flame, HelpCircle, CheckCircle2, Lightbulb } from 'lucide-react';
+import {
+  X,
+  Sparkles,
+  Network,
+  ArrowRight,
+  Flame,
+  HelpCircle,
+  CheckCircle2,
+  Lightbulb,
+  Brain,
+} from 'lucide-react';
 import { Cluster, Doubt } from '../types.js';
 
 interface SemanticConnectionModalProps {
@@ -20,6 +30,29 @@ export const SemanticConnectionModal: React.FC<SemanticConnectionModalProps> = (
   // Get all actual doubts matching this cluster
   const clusterDoubts = doubts.filter((d) => cluster.doubtIds.includes(d.id));
   const sampleDoubts = clusterDoubts.length > 0 ? clusterDoubts.slice(0, 5) : cluster.representativeDoubts.map((text, idx) => ({ id: `s-${idx}`, text, timestamp: '' }));
+
+  const toneBadgeClass: Record<string, string> = {
+    respectful: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+    neutral: 'bg-sky-500/10 border-sky-500/30 text-sky-300',
+    frustrated: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+    angry: 'bg-orange-500/10 border-orange-500/30 text-orange-300',
+    rude: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
+    abusive: 'bg-red-500/10 border-red-500/30 text-red-300',
+  };
+
+  const toneMap = clusterDoubts.reduce((acc: Record<string, number>, doubt) => {
+    const tone = (doubt.tone || 'neutral').toLowerCase();
+    acc[tone] = (acc[tone] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const toneEntries = Object.entries(toneMap).sort((a, b) => Number(b[1]) - Number(a[1]));
+
+  const toneSummary = toneEntries.length > 0 ? toneEntries.map(([tone, count]) => `${count} ${tone}`).join(' • ') : 'No tone metadata yet';
+  const underlyingLearningIssue = clusterDoubts
+    .map((d) => d.underlyingDoubt || d.rephrasedDoubt || d.text)
+    .find(Boolean) || cluster.description || cluster.label;
+  const recommendedAction = cluster.semanticExplanation || cluster.description;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in">
@@ -95,15 +128,54 @@ export const SemanticConnectionModal: React.FC<SemanticConnectionModalProps> = (
           </div>
         </div>
 
-        {/* AI Semantic Explanation */}
-        <div className="bg-black/40 border border-slate-800 rounded-xl p-5 space-y-2">
+        {/* Compact DoubtTone Teacher Insight */}
+        <div className="bg-black/40 border border-slate-800 rounded-xl p-5 space-y-4">
           <div className="flex items-center gap-2 text-amber-400 font-bold text-xs font-mono uppercase tracking-widest">
-            <Lightbulb className="w-4 h-4 text-amber-400" />
-            <span>AI CONCEPTUAL GAP EXPLANATION FOR TEACHER</span>
+            <Brain className="w-4 h-4 text-amber-400" />
+            <span>DoubtTone AI Cluster Insight</span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            {cluster.semanticExplanation}
-          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-3">
+            <div className="bg-[#141820] border border-slate-800 rounded-lg p-3 space-y-2">
+              <div className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-widest">
+                Tone Distribution
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {toneEntries.length > 0 ? (
+                  toneEntries.map(([tone, count]) => (
+                    <span
+                      key={tone}
+                      className={`px-2.5 py-1 rounded border text-[10px] font-bold uppercase tracking-wider ${toneBadgeClass[tone] || 'bg-slate-500/10 border-slate-500/30 text-slate-300'}`}
+                    >
+                      {tone}: {count}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-[11px] text-slate-400">No tone metadata available yet.</span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400">{toneSummary}</p>
+            </div>
+
+            <div className="bg-[#141820] border border-slate-800 rounded-lg p-3 space-y-2">
+              <div className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-widest">
+                Underlying Learning Issue
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                {underlyingLearningIssue}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#141820] border border-slate-800 rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-amber-400 font-mono uppercase tracking-widest">
+              <Lightbulb className="w-4 h-4 text-amber-400" />
+              <span>AI Recommended Action</span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {recommendedAction}
+            </p>
+          </div>
         </div>
 
         {/* All Doubts in this Cluster */}
