@@ -2,5 +2,5 @@
   "name": "DoubtMap",
   "description": "Turn 100 silent doubts into 4 things a teacher can fix. AI-powered real-time classroom intelligence system.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_LLM_API"]
 }

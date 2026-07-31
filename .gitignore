@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local tooling / Replit cache (never commit)
+.cache/
+.local/
+.upm/
+.replit
