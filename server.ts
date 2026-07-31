@@ -283,7 +283,7 @@ app.post('/api/sessions/:id/doubts', async (req, res) => {
     return;
   }
 
-  const { text } = req.body;
+  const { text, analysis } = req.body ?? {};
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
     res.status(400).json({ error: 'Doubt text cannot be empty' });
     return;
@@ -302,6 +302,14 @@ app.post('/api/sessions/:id/doubts', async (req, res) => {
     text: trimmed,
     timestamp: new Date().toISOString(),
     submittedByStudent: true,
+    originalText: typeof analysis?.underlying_doubt === 'string' ? trimmed : undefined,
+    analysisAvailable: analysis?.analysis_available === true,
+    tone: typeof analysis?.tone === 'string' ? analysis.tone : undefined,
+    intent: typeof analysis?.intent === 'string' ? analysis.intent : undefined,
+    underlyingDoubt: typeof analysis?.underlying_doubt === 'string' ? analysis.underlying_doubt : undefined,
+    rephrasedDoubt: typeof analysis?.rephrased_doubt === 'string' ? analysis.rephrased_doubt : undefined,
+    topic: typeof analysis?.topic === 'string' ? analysis.topic : undefined,
+    confidence: typeof analysis?.confidence === 'number' ? analysis.confidence : undefined,
   };
 
   store.doubts.push(doubt);

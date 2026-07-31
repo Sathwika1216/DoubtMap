@@ -1,16 +1,32 @@
 import React from 'react';
-import { Send, CheckCircle2, ShieldCheck, Lock, ArrowLeft } from 'lucide-react';
+import { Send, CheckCircle2, ShieldCheck, Lock, ArrowLeft, Sparkles, MessageCircleHeart } from 'lucide-react';
+import { shouldOfferRephrase } from '../services/doubtTone.js';
+import type { DoubtToneResult } from '../types.js';
 
 interface StudentViewProps {
   roomCode: string;
   lessonTitle: string;
-  onSubmitDoubt: (text: string) => Promise<boolean>;
+  sessionId?: string;
+  onSubmitDoubt: (
+    text: string,
+    analysis?: {
+      analysis_available?: boolean;
+      tone?: string;
+      intent?: string;
+      is_genuine_doubt?: boolean;
+      underlying_doubt?: string;
+      rephrased_doubt?: string;
+      topic?: string;
+      confidence?: number;
+    }
+  ) => Promise<boolean>;
   onJoinRoom: (code: string) => Promise<boolean>;
 }
 
 export const StudentView: React.FC<StudentViewProps> = ({
   roomCode,
   lessonTitle,
+  sessionId,
   onSubmitDoubt,
   onJoinRoom,
 }) => {
@@ -21,6 +37,9 @@ export const StudentView: React.FC<StudentViewProps> = ({
   const [submitted, setSubmitted] = React.useState(false);
   const [submitError, setSubmitError] = React.useState('');
   const [joinError, setJoinError] = React.useState('');
+  const [analyzing, setAnalyzing] = React.useState(false);
+  const [analysisResult, setAnalysisResult] = React.useState<DoubtToneResult | null>(null);
+  const [pendingSubmitText, setPendingSubmitText] = React.useState('');
 
   // Keep the input code in sync when the parent session changes
   React.useEffect(() => {
@@ -40,28 +59,76 @@ export const StudentView: React.FC<StudentViewProps> = ({
     }
   };
 
+  const analyzeTone = async (trimmed: string) => {
+    if (!sessionId) return null;
+
+    setAnalyzing(true);
+    setAnalysisResult(null);
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/doubts/analyze-tone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: trimmed }),
+      });
+
+      if (!res.ok) {
+        return null;
+      }
+
+      const payload = await res.json().catch(() => ({ success: false, analysis: { analysis_available: false } }));
+      const result = payload?.analysis as DoubtToneResult | undefined;
+      return result ?? null;
+    } catch (err) {
+      console.warn('Failed to analyze doubt tone:', err);
+      return null;
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const submitDoubt = async (submitText: string, analysis?: DoubtToneResult) => {
+    setSubmitting(true);
+    const success = await onSubmitDoubt(submitText, analysis?.analysis_available ? analysis : undefined);
+    setSubmitting(false);
+
+    if (success) {
+      setSubmitted(true);
+      setDoubtText('');
+      setAnalysisResult(null);
+      setPendingSubmitText('');
+    } else {
+      setSubmitError('Submission failed. Please try again.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = doubtText.trim();
     if (!trimmed || submitting) return;
 
-    // Client-side length guard (mirrors server validation)
     if (trimmed.length > 1000) {
       setSubmitError('Your question must be 1000 characters or fewer.');
       return;
     }
 
     setSubmitError('');
+    setPendingSubmitText(trimmed);
     setSubmitting(true);
-    const success = await onSubmitDoubt(trimmed);
-    setSubmitting(false);
+    const analysis = await analyzeTone(trimmed);
 
-    if (success) {
-      setSubmitted(true);
-      setDoubtText('');
-    } else {
-      setSubmitError('Submission failed. Please try again.');
+    if (analysis?.analysis_available && shouldOfferRephrase(analysis)) {
+      setAnalysisResult(analysis);
+      setSubmitting(false);
+      return;
     }
+
+    await submitDoubt(trimmed, analysis);
+  };
+
+  const handleRephraseChoice = async (useImproved: boolean) => {
+    if (!analysisResult?.analysis_available || !pendingSubmitText) return;
+    const choiceText = useImproved ? analysisResult.rephrased_doubt : pendingSubmitText;
+    await submitDoubt(choiceText, analysisResult);
   };
 
   return (
@@ -180,6 +247,45 @@ export const StudentView: React.FC<StudentViewProps> = ({
                     </span>
                   </div>
                 </div>
+
+                {analyzing && (
+                  <div className="flex items-center gap-2 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                    <span>✨ Understanding your doubt...</span>
+                  </div>
+                )}
+
+                {analysisResult?.analysis_available && shouldOfferRephrase(analysisResult) && (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3 text-left">
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-300">
+                      <MessageCircleHeart className="w-4 h-4" />
+                      <span>Make your doubt clearer?</span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] text-slate-300">Detected: <span className="font-semibold text-amber-200">{analysisResult.tone}</span></p>
+                      <p className="text-[11px] text-slate-300">AI-rephrased doubt:</p>
+                      <blockquote className="text-sm text-white border-l-2 border-amber-400 pl-3 italic">
+                        {analysisResult.rephrased_doubt}
+                      </blockquote>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRephraseChoice(true)}
+                        className="flex-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-[11px] uppercase tracking-widest py-2.5"
+                      >
+                        Use Improved Version
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRephraseChoice(false)}
+                        className="flex-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] uppercase tracking-widest py-2.5"
+                      >
+                        Keep Original
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-black/30 p-3 rounded-lg border border-slate-800">
                   <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />

@@ -143,12 +143,24 @@ export default function App() {
     }
   };
 
-  const handleSubmitStudentDoubt = async (text: string): Promise<boolean> => {
+  const handleSubmitStudentDoubt = async (
+    text: string,
+    analysis?: {
+      analysis_available?: boolean;
+      tone?: string;
+      intent?: string;
+      is_genuine_doubt?: boolean;
+      underlying_doubt?: string;
+      rephrased_doubt?: string;
+      topic?: string;
+      confidence?: number;
+    }
+  ): Promise<boolean> => {
     try {
       const res = await fetch(`/api/sessions/${sessionId}/doubts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, analysis }),
       });
       if (res.ok) {
         fetchSession(sessionId);
@@ -218,6 +230,7 @@ export default function App() {
           <StudentView
             roomCode={session?.code || 'DM-4821'}
             lessonTitle={session?.lessonTitle || 'Binary Search Trees'}
+            sessionId={sessionId}
             onSubmitDoubt={handleSubmitStudentDoubt}
             onJoinRoom={handleJoinRoom}
           />

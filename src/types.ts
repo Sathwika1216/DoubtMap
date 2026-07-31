@@ -47,6 +47,14 @@ export interface Doubt {
   hiddenCategory?: string;
   clusterId?: string;
   submittedByStudent?: boolean;
+  originalText?: string;
+  analysisAvailable?: boolean;
+  tone?: string;
+  intent?: string;
+  underlyingDoubt?: string;
+  rephrasedDoubt?: string;
+  topic?: string;
+  confidence?: number;
 }
 
 export interface Cluster {
