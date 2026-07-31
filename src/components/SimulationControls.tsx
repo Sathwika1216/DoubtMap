@@ -87,7 +87,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Streaming thermodynamics doubts into Gemini semantic clustering pipeline.
+              Streaming binary search tree doubts into Gemini semantic clustering pipeline.
             </p>
           </div>
         </div>
@@ -192,7 +192,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
               value={customDoubt}
               onChange={(e) => setCustomDoubt(e.target.value)}
               maxLength={1000}
-              placeholder="Type a test doubt (e.g. 'Why does entropy increase in mixing?')..."
+              placeholder="Type a test doubt (e.g. 'Why is deleting a node with two children so complicated?')..."
               className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
             />
             <button

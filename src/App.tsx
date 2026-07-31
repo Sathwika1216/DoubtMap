@@ -14,7 +14,7 @@ import { SessionFullData, Cluster } from './types.js';
 
 export default function App() {
   const [currentView, setCurrentView] = React.useState<'landing' | 'teacher' | 'student'>('teacher');
-  const [sessionId, setSessionId] = React.useState<string>('demo-session-entropy');
+  const [sessionId, setSessionId] = React.useState<string>('demo-session-bst');
   const [sessionData, setSessionData] = React.useState<SessionFullData | null>(null);
   const [selectedClusterId, setSelectedClusterId] = React.useState<string | null>(null);
   const [showSummaryModal, setShowSummaryModal] = React.useState<boolean>(false);
@@ -217,7 +217,7 @@ export default function App() {
         {currentView === 'student' && (
           <StudentView
             roomCode={session?.code || 'DM-4821'}
-            lessonTitle={session?.lessonTitle || 'Thermodynamics — Entropy'}
+            lessonTitle={session?.lessonTitle || 'Binary Search Trees'}
             onSubmitDoubt={handleSubmitStudentDoubt}
             onJoinRoom={handleJoinRoom}
           />

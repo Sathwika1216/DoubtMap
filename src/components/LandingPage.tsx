@@ -123,7 +123,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
               <span>Semantic Connection Engine</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Recognizes that "Why can't entropy decrease?" and "Why is an irreversible process one-way?" share the exact same conceptual gap.
+              Recognizes that "Why is BST deletion so complicated?" and "What are the 3 cases for removing a node?" share the exact same conceptual gap.
             </p>
           </div>
 
@@ -133,7 +133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
               <span>Live Simulation &amp; Decision Support</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Includes a 100-doubt thermodynamics test dataset for instant demonstration, complete with live stream controls.
+              Includes a 42-doubt binary search tree dataset for instant demonstration, complete with live stream controls.
             </p>
           </div>
         </div>

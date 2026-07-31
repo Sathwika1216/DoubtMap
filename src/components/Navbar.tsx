@@ -15,7 +15,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   onViewChange,
   roomCode = 'DM-4821',
-  lessonTitle = 'Thermodynamics — Entropy',
+  lessonTitle = 'Binary Search Trees',
   aiMode = 'GEMINI_AI',
   onOpenCreateSession,
   onOpenSummary,

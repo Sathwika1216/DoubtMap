@@ -34,7 +34,7 @@ const sessionMap = new Map<string, SessionStore>();
 
 // Create initial default demo session
 function createDefaultDemoSession(): SessionStore {
-  const sessionId = 'demo-session-entropy';
+  const sessionId = 'demo-session-bst';
   const defaultSession: Session = {
     id: sessionId,
     code: 'DM-4821',
@@ -67,7 +67,7 @@ function createDefaultDemoSession(): SessionStore {
         id: 'act-init',
         sessionId,
         type: 'AI_ANALYSIS_RUN',
-        message: 'DoubtMap AI Semantic Engine initialized and monitoring thermodynamics classroom.',
+        message: 'DoubtMap AI Semantic Engine initialized and monitoring binary search tree classroom.',
         timestamp: new Date().toISOString(),
       },
     ],
@@ -196,7 +196,7 @@ app.post('/api/sessions', async (req, res) => {
 // 2. Get Session Full Data
 app.get('/api/sessions/:id', (req, res) => {
   let store = sessionMap.get(req.params.id);
-  if (!store && req.params.id === 'demo-session-entropy') {
+  if (!store && req.params.id === 'demo-session-bst') {
     store = createDefaultDemoSession();
   }
 

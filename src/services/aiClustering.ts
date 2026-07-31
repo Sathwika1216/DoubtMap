@@ -3,30 +3,40 @@ import { Doubt, Cluster, HeatLevel, TrendDirection } from '../types.js';
 
 // Category metadata for local fallback clustering
 const CATEGORY_MAP: Record<string, { label: string; description: string; explanation: string }> = {
-  direction_irreversibility: {
-    label: 'Entropy Direction & Irreversibility',
-    description: 'Confusion regarding why macroscopic processes, heat flow, and energy dissipation are strictly one-way.',
-    explanation: 'Students express this in different ways—asking about the arrow of time, shattered glass, or heat moving cold-to-hot. The core gap is understanding entropy as a directional constraint rather than a conserved quantity.',
+  definition_rules: {
+    label: 'BST Definition & Ordering Rules',
+    description: 'Confusion about what property distinguishes a BST from a generic binary tree and how the ordering constraint applies globally.',
+    explanation: 'Students often think only the immediate parent-child relationship matters, missing that the ordering rule must hold for the entire subtree. Different phrasings—asking about duplicates, string keys, or single-node trees—share this same core gap.',
   },
-  calculation_math: {
-    label: 'Entropy Calculation & State Functions',
-    description: 'Difficulty calculating Delta S, constructing reversible paths, and applying integral dQ/T.',
-    explanation: 'Whether students ask about ice melting, gas expansion, or cyclic integrals, they are confused about constructing a hypothetical reversible path to compute state function change for an irreversible process.',
+  search_operation: {
+    label: 'Search & Comparison Logic',
+    description: 'Uncertainty about how search navigates the tree and under what conditions it achieves O(log n) performance.',
+    explanation: 'Whether students ask "how do we pick left or right?" or "why is this faster than a scan?", the gap is the same: they have not connected the BST ordering property to the binary elimination of half the remaining keys at each step.',
   },
-  system_surroundings: {
-    label: 'System vs. Surroundings & Universe Entropy',
-    description: 'Misunderstanding how local entropy decreases (e.g., freezing water, living cells) relate to total universe entropy.',
-    explanation: 'Students confuse local system entropy with total universe entropy. They frequently assume local ordering or refrigeration violates the Second Law because they omit heat dump to surroundings.',
+  insertion: {
+    label: 'Insertion & Tree Shape',
+    description: 'Difficulty understanding where new nodes land and how insertion order determines the tree\'s shape and future performance.',
+    explanation: 'Questions about where a node goes, how to trace the path, and why sorted insertion degrades the tree all reduce to one idea: insertion follows the search path and always places the new key at a leaf position.',
   },
-  reversible_efficiency: {
-    label: 'Reversible vs. Irreversible & Carnot Limits',
-    description: 'Uncertainty surrounding Carnot engine limits, friction loss, and why 100% efficiency is physically impossible.',
-    explanation: 'Students ask about Carnot cycles, friction, or lost work. All these stem from confusing theoretical reversible quasi-static paths with real dissipative engineering processes.',
+  deletion: {
+    label: 'Deletion Cases & In-Order Successor',
+    description: 'The three-case deletion algorithm is the most complex BST operation; students struggle with the two-child case and the role of the in-order successor.',
+    explanation: 'Whether phrased as "why three cases?", "what is the in-order successor?", or "can I use the predecessor instead?", all these doubts stem from not seeing deletion as a search-then-replace operation that must preserve the BST property.',
   },
-  microstates_spontaneity: {
-    label: 'Statistical Microstates & Gibbs Spontaneity',
-    description: 'Struggling to connect Boltzmann microstate probability W with macroscopic free energy Delta G.',
-    explanation: 'Phrasings vary from statistical microstate counting to absolute zero crystal entropy or reaction spontaneity. The unified gap is bridging microscopic particle configurations to macroscopic spontaneity.',
+  complexity_height: {
+    label: 'Time Complexity & Tree Height',
+    description: 'Misunderstanding why BST complexity is O(h), not O(log n), and how input ordering produces worst-case degeneration.',
+    explanation: 'Students conflate the average case with the guaranteed case. The central gap is that h can range from log n to n, making the worst-case a linked list—a consequence of insertion order, not the algorithm.',
+  },
+  traversal: {
+    label: 'Traversal Orders & Sorted Output',
+    description: 'Confusion about the three DFS traversal orders and why in-order specifically produces sorted output.',
+    explanation: 'Pre-order, in-order, and post-order look nearly identical in code; students who cannot explain why in-order gives a sorted sequence have not internalized the BST property as an invariant that traversal exploits.',
+  },
+  balancing_degeneration: {
+    label: 'Balancing, Rotations & Degeneration',
+    description: 'Uncertainty about what a balanced BST is, why a plain BST can degenerate, and how AVL/red-black trees use rotations to prevent it.',
+    explanation: 'Questions about AVL vs red-black, what rotations are, and why sorted inserts break a BST all connect to one idea: without automatic rebalancing, the ordering guarantee alone cannot bound height, so self-balancing trees pay a small rotation cost to guarantee O(log n) in the worst case.',
   },
 };
 
@@ -89,7 +99,7 @@ export async function clusterDoubts(
         .join('\n');
 
       const prompt = `
-You are DoubtMap's AI Semantic Analysis Engine for an physics/chemistry lecture on Thermodynamics (Entropy & Second Law).
+You are DoubtMap's AI Semantic Analysis Engine for a computer science lecture on Binary Search Trees (BSTs).
 Analyze the following list of ${doubts.length} anonymous student doubts.
 Group them semantically into 3 to 5 distinct, high-impact conceptual gaps.
 
@@ -99,11 +109,11 @@ ${doubtListText}
 Guidelines:
 1. Do not perform simple keyword matching. Group by fundamental conceptual misunderstanding.
 2. For each cluster:
-   - Provide a clear, short, actionable title (e.g. "Entropy Direction & Irreversibility").
+   - Provide a clear, short, actionable title (e.g. "Deletion Cases & In-Order Successor").
    - Provide a 1-sentence description of the concept gap.
    - List all doubt IDs belonging to this cluster.
    - Pick 2 to 3 representative student doubt strings.
-   - Provide a 2-sentence "semanticExplanation" highlighting how differently-worded doubts (e.g., asking about shattered glass vs. heat flow vs. arrow of time) share the exact same underlying conceptual gap.
+   - Provide a 2-sentence "semanticExplanation" highlighting how differently-worded doubts (e.g., asking about the 3 cases vs. what is the in-order successor vs. can I use the predecessor) share the exact same underlying conceptual gap.
    - Set "heat" level ("LOW", "MEDIUM", "HIGH", "CRITICAL") based on proportion and urgency.
    - Set "trend" ("UP", "STABLE", "DOWN").
 
@@ -432,7 +442,7 @@ Respond in JSON format with fields:
   }
 
   return {
-    summary: 'Classroom confusion is evenly distributed across core thermodynamics topics.',
+    summary: 'Classroom confusion is evenly distributed across core binary search tree topics.',
     actionableAdvice: 'Take a 3-minute Q&A pause to address representative questions from top clusters.',
     topConfusions: defaultTopConfusions,
   };

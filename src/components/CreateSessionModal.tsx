@@ -11,8 +11,8 @@ export const CreateSessionModal: React.FC<CreateSessionModalProps> = ({
   onCreateSession,
 }) => {
   const [subject, setSubject] = React.useState('Physics');
-  const [lessonTitle, setLessonTitle] = React.useState('Thermodynamics — Entropy');
-  const [description, setDescription] = React.useState('Second Law of Thermodynamics, Heat Engines, and Microstates');
+  const [lessonTitle, setLessonTitle] = React.useState('Binary Search Trees');
+  const [description, setDescription] = React.useState('BST structure, search/insert/delete operations, traversals, complexity, and balancing');
   const [loading, setLoading] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
