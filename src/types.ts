@@ -1,6 +1,44 @@
 export type HeatLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type TrendDirection = 'UP' | 'STABLE' | 'DOWN';
 
+/** DoubtTone AI tone categories */
+export type DoubtTone =
+  | 'respectful'
+  | 'neutral'
+  | 'frustrated'
+  | 'angry'
+  | 'rude'
+  | 'abusive';
+
+/** DoubtTone AI intent categories */
+export type DoubtIntent =
+  | 'genuine_doubt'
+  | 'conceptual_confusion'
+  | 'request_for_example'
+  | 'request_for_clarification'
+  | 'feedback_complaint'
+  | 'irrelevant'
+  | 'other';
+
+/** Successful DoubtTone analysis payload */
+export interface DoubtToneAnalysis {
+  analysis_available: true;
+  tone: DoubtTone;
+  intent: DoubtIntent;
+  is_genuine_doubt: boolean;
+  underlying_doubt: string;
+  rephrased_doubt: string;
+  topic: string;
+  confidence: number;
+}
+
+/** Fallback when AI analysis fails or is unavailable */
+export interface DoubtToneUnavailable {
+  analysis_available: false;
+}
+
+export type DoubtToneResult = DoubtToneAnalysis | DoubtToneUnavailable;
+
 export interface Doubt {
   id: string;
   sessionId: string;

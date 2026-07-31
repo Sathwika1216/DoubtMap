@@ -4,6 +4,7 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { DEMO_DOUBTS_DATASET, DEMO_LESSON_INFO } from './src/data/demoDataset.js';
 import { clusterDoubts, generateTeacherInsight } from './src/services/aiClustering.js';
+import { analyzeDoubtTone } from './src/services/doubtTone.js';
 import {
   Session,
   Doubt,
@@ -242,6 +243,36 @@ app.get('/api/sessions/code/:code', (req, res) => {
     }
   }
   res.status(404).json({ error: 'Classroom code not found' });
+});
+
+// 3b. DoubtTone AI — analyze tone + learning intent (does not store the doubt)
+app.post('/api/sessions/:id/doubts/analyze-tone', async (req, res) => {
+  const store = sessionMap.get(req.params.id);
+  if (!store) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+
+  const { text } = req.body ?? {};
+  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    res.status(400).json({ error: 'Doubt text cannot be empty' });
+    return;
+  }
+
+  const trimmed = text.trim();
+  if (trimmed.length > 1000) {
+    res.status(400).json({ error: 'Doubt text must be 1000 characters or fewer' });
+    return;
+  }
+
+  try {
+    const analysis = await analyzeDoubtTone(trimmed);
+    res.json({ success: true, analysis });
+  } catch (err) {
+    // Never crash the client flow — always return a safe fallback payload
+    console.warn('analyze-tone endpoint error:', err);
+    res.json({ success: true, analysis: { analysis_available: false } });
+  }
 });
 
 // 4. Submit Doubt

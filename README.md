@@ -75,3 +75,16 @@ Clustering grouping logic, embeddings/graph behavior, routing, auth, and UI layo
 DoubtTone AI will analyze the **learning intent** behind student doubts (including frustrated/rude wording) before they enter clustering — without acting as a moderation system. Integration plan and architecture notes:
 
 → [`docs/DOUBTTONE_ARCHITECTURE.md`](docs/DOUBTTONE_ARCHITECTURE.md)
+
+### Backend (Stage 2)
+
+Analyze tone + intent without storing the doubt:
+
+```http
+POST /api/sessions/:id/doubts/analyze-tone
+Content-Type: application/json
+
+{ "text": "Why is this stupid formula even used? I don't understand it." }
+```
+
+Returns `{ success, analysis }` where `analysis` is either a full DoubtTone payload or `{ "analysis_available": false }` on AI failure.
