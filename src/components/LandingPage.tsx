@@ -75,8 +75,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
                 <Sparkles className="w-6 h-6 animate-pulse" />
               </div>
               <h3 className="font-semibold text-white text-sm mb-1">AI SEMANTIC ANALYSIS</h3>
+              {/* Bug fix #11: updated model name */}
               <p className="text-xs text-slate-400">
-                Gemini 3.6 Flash understands meaning beyond exact keywords.
+                Gemini 2.0 Flash understands meaning beyond exact keywords.
               </p>
             </div>
 
@@ -98,7 +99,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
               </div>
               <h3 className="font-semibold text-white text-sm mb-1">TEACHER ACTION</h3>
               <p className="text-xs text-slate-400">
-                Targeted lecture adjustment & instant resolution tracking.
+                Targeted lecture adjustment &amp; instant resolution tracking.
               </p>
             </div>
           </div>
@@ -129,10 +130,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 space-y-2 hover:border-slate-700 transition-colors">
             <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
               <Zap className="w-4 h-4" />
-              <span>Live Simulation & Decision Support</span>
+              <span>Live Simulation &amp; Decision Support</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Includes a 100-doubt thermodynamics test dataset for instant hackathon demonstration, complete with live stream controls.
+              Includes a 100-doubt thermodynamics test dataset for instant demonstration, complete with live stream controls.
             </p>
           </div>
         </div>
@@ -140,7 +141,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
 
       {/* Footer */}
       <div className="max-w-6xl mx-auto w-full pt-8 text-center text-xs text-slate-500 border-t border-slate-900 mt-12">
-        <p>DoubtMap — AI-Powered Live Classroom Intelligence System • Built with Gemini 3.6 Flash</p>
+        {/* Bug fix #11: updated model name */}
+        <p>DoubtMap — AI-Powered Live Classroom Intelligence System • Powered by Gemini 2.0 Flash</p>
       </div>
     </div>
   );

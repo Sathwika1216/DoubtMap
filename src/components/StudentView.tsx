@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send, CheckCircle2, ShieldCheck, Flame, Lock, HelpCircle } from 'lucide-react';
+import { Send, CheckCircle2, ShieldCheck, Lock, ArrowLeft } from 'lucide-react';
 
 interface StudentViewProps {
   roomCode: string;
@@ -19,32 +19,48 @@ export const StudentView: React.FC<StudentViewProps> = ({
   const [doubtText, setDoubtText] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState('');
   const [joinError, setJoinError] = React.useState('');
+
+  // Keep the input code in sync when the parent session changes
+  React.useEffect(() => {
+    if (roomCode) setInputCode(roomCode);
+  }, [roomCode]);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     setJoinError('');
-    if (inputCode.trim()) {
-      const ok = await onJoinRoom(inputCode.trim());
-      if (ok) {
-        setJoined(true);
-      } else {
-        setJoinError('Classroom code not found. Please try "DM-4821".');
-      }
+    const code = inputCode.trim().toUpperCase();
+    if (!code) return;
+    const ok = await onJoinRoom(code);
+    if (ok) {
+      setJoined(true);
+    } else {
+      setJoinError(`Classroom code "${code}" not found. Please check the code and try again.`);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!doubtText.trim() || submitting) return;
+    const trimmed = doubtText.trim();
+    if (!trimmed || submitting) return;
 
+    // Client-side length guard (mirrors server validation)
+    if (trimmed.length > 1000) {
+      setSubmitError('Your question must be 1000 characters or fewer.');
+      return;
+    }
+
+    setSubmitError('');
     setSubmitting(true);
-    const success = await onSubmitDoubt(doubtText.trim());
+    const success = await onSubmitDoubt(trimmed);
     setSubmitting(false);
 
     if (success) {
       setSubmitted(true);
       setDoubtText('');
+    } else {
+      setSubmitError('Submission failed. Please try again.');
     }
   };
 
@@ -77,14 +93,16 @@ export const StudentView: React.FC<StudentViewProps> = ({
               <input
                 type="text"
                 value={inputCode}
-                onChange={(e) => setInputCode(e.target.value)}
+                onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                 placeholder="e.g. DM-4821"
                 className="w-full bg-black/40 border border-slate-700 rounded-lg px-4 py-3 text-center text-lg font-mono font-bold text-amber-400 placeholder-slate-600 focus:outline-none focus:border-amber-500 uppercase tracking-widest"
+                maxLength={10}
               />
               {joinError && <p className="text-xs text-rose-400 text-center">{joinError}</p>}
               <button
                 type="submit"
-                className="w-full py-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-widest transition-all"
+                disabled={!inputCode.trim()}
+                className="w-full py-3 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-widest transition-all disabled:opacity-50"
               >
                 Join Live Classroom
               </button>
@@ -94,14 +112,24 @@ export const StudentView: React.FC<StudentViewProps> = ({
           /* Main Doubt Submission Form */
           <div className="bg-[#0E1117] border border-slate-800 rounded-xl p-6 sm:p-8 shadow-sm space-y-5">
             {/* Session Info Bar */}
-            <div className="bg-black/30 rounded-lg p-3 border border-slate-800 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <div className="bg-black/30 rounded-lg p-3 border border-slate-800 flex items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
                 <span className="font-semibold text-white line-clamp-1">{lessonTitle}</span>
               </div>
-              <span className="font-mono text-amber-400 font-bold bg-black/40 px-2 py-0.5 rounded border border-amber-500/20 shrink-0 uppercase tracking-wider">
-                {roomCode}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-mono text-amber-400 font-bold bg-black/40 px-2 py-0.5 rounded border border-amber-500/20 uppercase tracking-wider">
+                  {roomCode}
+                </span>
+                {/* Allow switching to a different classroom */}
+                <button
+                  onClick={() => { setJoined(false); setSubmitted(false); setSubmitError(''); }}
+                  title="Change classroom code"
+                  className="p-1 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             {/* Submission State Message */}
@@ -135,11 +163,22 @@ export const StudentView: React.FC<StudentViewProps> = ({
                   <textarea
                     rows={4}
                     value={doubtText}
-                    onChange={(e) => setDoubtText(e.target.value)}
+                    onChange={(e) => { setDoubtText(e.target.value); setSubmitError(''); }}
                     placeholder="e.g., Why can't heat flow from cold to hot spontaneously in a refrigerator without work?"
                     className="w-full bg-black/40 border border-slate-700 rounded-lg p-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none font-sans"
+                    maxLength={1000}
                     required
                   />
+                  <div className="flex justify-between items-center text-[10px]">
+                    {submitError ? (
+                      <p className="text-rose-400">{submitError}</p>
+                    ) : (
+                      <span />
+                    )}
+                    <span className={`font-mono ml-auto ${doubtText.length > 900 ? 'text-amber-400' : 'text-slate-500'}`}>
+                      {doubtText.length}/1000
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-black/30 p-3 rounded-lg border border-slate-800">

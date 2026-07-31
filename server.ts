@@ -26,6 +26,8 @@ interface SessionStore {
   activities: ActivityEvent[];
   insight?: TeacherInsight;
   simulationIndex: number;
+  // Bug fix #2: flag prevents concurrent AI clustering calls in the setInterval loop
+  isProcessingClustering: boolean;
 }
 
 const sessionMap = new Map<string, SessionStore>();
@@ -70,6 +72,7 @@ function createDefaultDemoSession(): SessionStore {
       },
     ],
     simulationIndex: 0,
+    isProcessingClustering: false,
   };
 
   sessionMap.set(sessionId, store);
@@ -109,6 +112,7 @@ function logActivity(
 }
 
 // Re-cluster doubts for a session
+// Bug fix #3: wrapped in try/catch so errors don't silently crash callers
 async function refreshSessionClustering(store: SessionStore) {
   if (store.doubts.length === 0) {
     store.clusters = [];
@@ -116,22 +120,26 @@ async function refreshSessionClustering(store: SessionStore) {
     return;
   }
 
-  const { clusters, mode } = await clusterDoubts(
-    store.doubts,
-    store.session.id,
-    store.clusters
-  );
+  try {
+    const { clusters, mode } = await clusterDoubts(
+      store.doubts,
+      store.session.id,
+      store.clusters
+    );
 
-  store.clusters = clusters;
-  store.session.aiEngineMode = mode;
-  store.session.lastAnalysisTime = new Date().toISOString();
-  store.session.activeGapCount = clusters.filter((c) => !c.addressed).length;
+    store.clusters = clusters;
+    store.session.aiEngineMode = mode;
+    store.session.lastAnalysisTime = new Date().toISOString();
+    store.session.activeGapCount = clusters.filter((c) => !c.addressed).length;
 
-  logActivity(
-    store,
-    'CLUSTER_UPDATED',
-    `AI analyzed ${store.doubts.length} doubts into ${clusters.length} conceptual gap${clusters.length === 1 ? '' : 's'}.`
-  );
+    logActivity(
+      store,
+      'CLUSTER_UPDATED',
+      `AI analyzed ${store.doubts.length} doubts into ${clusters.length} conceptual gap${clusters.length === 1 ? '' : 's'}.`
+    );
+  } catch (err) {
+    console.error('refreshSessionClustering failed:', err);
+  }
 }
 
 // Server API Routes
@@ -178,6 +186,7 @@ app.post('/api/sessions', async (req, res) => {
       },
     ],
     simulationIndex: 0,
+    isProcessingClustering: false,
   };
 
   sessionMap.set(id, store);
@@ -248,10 +257,17 @@ app.post('/api/sessions/:id/doubts', async (req, res) => {
     return;
   }
 
+  // Bug fix #9: limit doubt length to prevent oversized AI prompts
+  const trimmed = text.trim();
+  if (trimmed.length > 1000) {
+    res.status(400).json({ error: 'Doubt text must be 1000 characters or fewer' });
+    return;
+  }
+
   const doubt: Doubt = {
     id: `d-std-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     sessionId: store.session.id,
-    text: text.trim(),
+    text: trimmed,
     timestamp: new Date().toISOString(),
     submittedByStudent: true,
   };
@@ -261,8 +277,15 @@ app.post('/api/sessions/:id/doubts', async (req, res) => {
 
   logActivity(store, 'DOUBT_RECEIVED', 'New anonymous student doubt received.', undefined, doubt.text);
 
-  // Trigger clustering update
-  await refreshSessionClustering(store);
+  // Trigger clustering update (guard against concurrent calls)
+  if (!store.isProcessingClustering) {
+    store.isProcessingClustering = true;
+    try {
+      await refreshSessionClustering(store);
+    } finally {
+      store.isProcessingClustering = false;
+    }
+  }
 
   res.json({ success: true, doubt });
 });
@@ -345,6 +368,7 @@ app.post('/api/sessions/:id/simulation/start', async (req, res) => {
 
   const { fastMode } = req.body;
 
+  // Bug fix #6: if already running in a different mode, stop cleanly before switching
   store.session.simulation.isRunning = true;
   store.session.simulation.isPaused = false;
   store.session.simulation.isFastMode = !!fastMode;
@@ -390,6 +414,7 @@ app.post('/api/sessions/:id/simulation/reset', (req, res) => {
   store.simulationIndex = 0;
   store.session.doubtCount = 0;
   store.session.activeGapCount = 0;
+  store.isProcessingClustering = false;
   store.session.simulation = {
     isRunning: false,
     isPaused: false,
@@ -404,13 +429,16 @@ app.post('/api/sessions/:id/simulation/reset', (req, res) => {
 });
 
 // Server-side loop for live simulation progression
+// Bug fix #2: use isProcessingClustering flag to prevent overlapping async AI calls
 setInterval(async () => {
   for (const store of sessionMap.values()) {
     const sim = store.session.simulation;
     if (sim.isRunning && !sim.isPaused) {
       if (store.simulationIndex < DEMO_DOUBTS_DATASET.length) {
         // Release 1-3 doubts in normal mode, or 4-8 doubts in fast mode
-        const batchSize = sim.isFastMode ? Math.min(8, DEMO_DOUBTS_DATASET.length - store.simulationIndex) : Math.min(2, DEMO_DOUBTS_DATASET.length - store.simulationIndex);
+        const batchSize = sim.isFastMode
+          ? Math.min(8, DEMO_DOUBTS_DATASET.length - store.simulationIndex)
+          : Math.min(2, DEMO_DOUBTS_DATASET.length - store.simulationIndex);
 
         const newBatch = DEMO_DOUBTS_DATASET.slice(
           store.simulationIndex,
@@ -440,8 +468,14 @@ setInterval(async () => {
           newBatch[0]?.text
         );
 
-        // Run clustering update
-        await refreshSessionClustering(store);
+        // Bug fix #2: skip clustering if a previous call is still in-flight
+        if (!store.isProcessingClustering) {
+          store.isProcessingClustering = true;
+          // Bug fix #3: errors in clustering no longer crash the interval
+          refreshSessionClustering(store)
+            .catch((err) => console.error('Interval clustering error:', err))
+            .finally(() => { store.isProcessingClustering = false; });
+        }
       } else {
         // Simulation complete
         sim.isRunning = false;

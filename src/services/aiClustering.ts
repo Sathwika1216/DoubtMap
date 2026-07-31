@@ -30,6 +30,18 @@ const CATEGORY_MAP: Record<string, { label: string; description: string; explana
   },
 };
 
+// Bug fix #4: Generate a stable cluster ID from the label so IDs survive re-clustering
+// across polling cycles. Without this, every re-cluster emits new index-based IDs that
+// break any in-flight "mark addressed" API call referencing the old ID.
+function stableClusterId(label: string, sessionId: string): string {
+  let hash = 5381;
+  for (let i = 0; i < label.length; i++) {
+    hash = ((hash << 5) + hash) + label.charCodeAt(i);
+    hash |= 0; // coerce to 32-bit int
+  }
+  return `c-ai-${Math.abs(hash).toString(36)}-${sessionId.slice(0, 4)}`;
+}
+
 export async function clusterDoubts(
   doubts: Doubt[],
   sessionId: string,
@@ -73,7 +85,7 @@ export async function clusterDoubts(
       });
 
       const doubtListText = doubts
-        .map((d, index) => `ID: ${d.id} | Doubt: "${d.text}"`)
+        .map((d) => `ID: ${d.id} | Doubt: "${d.text}"`)
         .join('\n');
 
       const prompt = `
@@ -98,8 +110,9 @@ Guidelines:
 Respond strictly in JSON format.
 `;
 
+      // Bug fix #1: corrected model name from the non-existent 'gemini-3.6-flash'
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -162,7 +175,7 @@ Respond strictly in JSON format.
             });
           }
 
-          const formattedClusters: Cluster[] = parsed.clusters.map((c: any, idx: number) => {
+          const formattedClusters: Cluster[] = parsed.clusters.map((c: any) => {
             const count = c.doubtIds?.length || 1;
             const percentage = Math.round((count / totalCount) * 100);
             const prevAddressed = addressedMap.get(c.label.toLowerCase());
@@ -192,8 +205,9 @@ Respond strictly in JSON format.
               LOW: 20 + Math.min(percentage, 20),
             };
 
+            // Bug fix #4: use stable ID derived from label, not array index
             return {
-              id: `c-ai-${idx + 1}-${sessionId.slice(0, 4)}`,
+              id: stableClusterId(c.label, sessionId),
               sessionId,
               label: c.label,
               description: c.description,
@@ -306,6 +320,7 @@ function performLocalSemanticClustering(
     const representativeDoubts = Array.from(new Set(categoryDoubts.map((d) => d.text))).slice(0, 3);
     const prevAddressed = addressedMap.get(key) || addressedMap.get(meta.label.toLowerCase());
 
+    // Bug fix #4: local clusters use stable key-based ID (already stable by category key)
     resultClusters.push({
       id: `c-loc-${key}-${sessionId.slice(0, 4)}`,
       sessionId,
@@ -377,8 +392,9 @@ Respond in JSON format with fields:
 }
 `;
 
+      // Bug fix #1: corrected model name
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',

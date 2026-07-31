@@ -16,7 +16,7 @@ export default function App() {
   const [currentView, setCurrentView] = React.useState<'landing' | 'teacher' | 'student'>('teacher');
   const [sessionId, setSessionId] = React.useState<string>('demo-session-entropy');
   const [sessionData, setSessionData] = React.useState<SessionFullData | null>(null);
-  const [selectedCluster, setSelectedCluster] = React.useState<Cluster | null>(null);
+  const [selectedClusterId, setSelectedClusterId] = React.useState<string | null>(null);
   const [showSummaryModal, setShowSummaryModal] = React.useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = React.useState<boolean>(false);
   const [insightLoading, setInsightLoading] = React.useState<boolean>(false);
@@ -81,11 +81,17 @@ export default function App() {
 
   const handleAddTestDoubt = async (text: string) => {
     try {
-      await fetch(`/api/sessions/${sessionId}/doubts`, {
+      const res = await fetch(`/api/sessions/${sessionId}/doubts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error('Failed to add test doubt:', err.error);
+        alert(err.error || 'Failed to add doubt.');
+        return;
+      }
       fetchSession(sessionId);
     } catch (err) {
       console.error('Failed to add test doubt:', err);
@@ -148,6 +154,9 @@ export default function App() {
         fetchSession(sessionId);
         return true;
       }
+      // Surface server validation errors (e.g. too long)
+      const errBody = await res.json().catch(() => ({}));
+      if (errBody?.error) console.error('Student submission rejected:', errBody.error);
     } catch (err) {
       console.error('Student submission error:', err);
     }
@@ -175,6 +184,13 @@ export default function App() {
   const activities = sessionData?.activities || [];
   const insight = sessionData?.insight;
   const summary = sessionData?.summary;
+
+  // Bug fix #10: derive the selected cluster from live data so the modal always has
+  // fresh counts, addressed status, and doubtIds after each polling cycle.
+  const selectedCluster: Cluster | null = React.useMemo(() => {
+    if (!selectedClusterId) return null;
+    return clusters.find((c) => c.id === selectedClusterId) ?? null;
+  }, [selectedClusterId, clusters]);
 
   return (
     <div className="min-h-screen bg-[#0A0D12] text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-black">
@@ -235,7 +251,7 @@ export default function App() {
               <div className="lg:col-span-8 space-y-6">
                 <HeatmapGrid
                   clusters={clusters}
-                  onViewDetails={(c) => setSelectedCluster(c)}
+                  onViewDetails={(c) => setSelectedClusterId(c.id)}
                   onToggleAddressed={handleToggleAddressed}
                 />
               </div>
@@ -260,7 +276,7 @@ export default function App() {
         <SemanticConnectionModal
           cluster={selectedCluster}
           doubts={doubts}
-          onClose={() => setSelectedCluster(null)}
+          onClose={() => setSelectedClusterId(null)}
           onToggleAddressed={handleToggleAddressed}
         />
       )}

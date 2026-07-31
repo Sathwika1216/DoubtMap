@@ -23,7 +23,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [copied, setCopied] = React.useState(false);
 
   const copyCode = () => {
-    navigator.clipboard.writeText(roomCode);
+    navigator.clipboard.writeText(roomCode).catch(() => {
+      // Fallback for environments where clipboard API is restricted
+      const el = document.createElement('textarea');
+      el.value = roomCode;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -77,7 +85,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-slate-600">|</span>
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-indigo-300">
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{aiMode === 'GEMINI_AI' ? 'Gemini 3.6 Flash' : 'Standby Engine'}</span>
+              {/* Bug fix #11: updated model label */}
+              <span>{aiMode === 'GEMINI_AI' ? 'Gemini 2.0 Flash' : 'Standby Engine'}</span>
             </div>
           </div>
         )}

@@ -19,14 +19,24 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   const [secondsAgo, setSecondsAgo] = React.useState<number>(0);
 
   React.useEffect(() => {
-    const interval = setInterval(() => {
+    const update = () => {
       if (lastAnalysisTime) {
         const diff = Math.max(0, Math.floor((Date.now() - new Date(lastAnalysisTime).getTime()) / 1000));
         setSecondsAgo(diff);
       }
-    }, 1000);
+    };
+    update(); // set immediately on mount/change
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [lastAnalysisTime]);
+
+  // Bug fix #8: derive gap status label dynamically instead of hardcoding "Critical"
+  const gapStatusLabel =
+    activeGapCount === 0
+      ? 'None'
+      : activeGapCount === 1
+      ? 'Active'
+      : 'Active';
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
@@ -56,7 +66,10 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
           </span>
           <div className="text-2xl sm:text-3xl font-light text-white font-mono tracking-tight flex items-baseline gap-2">
             <span>{activeGapCount}</span>
-            <span className="text-xs font-semibold text-amber-400 font-sans">Critical</span>
+            {/* Bug fix #8: was always "Critical", now reflects real state */}
+            <span className={`text-xs font-semibold font-sans ${activeGapCount === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+              {gapStatusLabel}
+            </span>
           </div>
         </div>
         <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
@@ -93,7 +106,8 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
           </div>
           <p className="text-[10px] text-amber-500 font-bold uppercase tracking-tighter flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>{aiMode === 'GEMINI_AI' ? 'Gemini 3.6 Flash' : 'Standby Engine'}</span>
+            {/* Bug fix #11: updated model name label */}
+            <span>{aiMode === 'GEMINI_AI' ? 'Gemini 2.0 Flash' : 'Standby Engine'}</span>
           </p>
         </div>
         <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">
