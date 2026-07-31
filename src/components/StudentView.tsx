@@ -9,6 +9,7 @@ interface StudentViewProps {
   sessionId?: string;
   onSubmitDoubt: (
     text: string,
+    originalText: string,
     analysis?: {
       analysis_available?: boolean;
       tone?: string;
@@ -88,7 +89,7 @@ export const StudentView: React.FC<StudentViewProps> = ({
 
   const submitDoubt = async (submitText: string, analysis?: DoubtToneResult) => {
     setSubmitting(true);
-    const success = await onSubmitDoubt(submitText, analysis?.analysis_available ? analysis : undefined);
+    const success = await onSubmitDoubt(submitText, pendingSubmitText || doubtText.trim(), analysis?.analysis_available ? analysis : undefined);
     setSubmitting(false);
 
     if (success) {

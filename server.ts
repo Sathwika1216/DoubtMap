@@ -283,7 +283,7 @@ app.post('/api/sessions/:id/doubts', async (req, res) => {
     return;
   }
 
-  const { text, analysis } = req.body ?? {};
+  const { text, originalText, analysis } = req.body ?? {};
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
     res.status(400).json({ error: 'Doubt text cannot be empty' });
     return;
@@ -296,13 +296,19 @@ app.post('/api/sessions/:id/doubts', async (req, res) => {
     return;
   }
 
+  const originalTrimmed = typeof originalText === 'string' ? originalText.trim() : trimmed;
+  if (originalTrimmed.length > 1000) {
+    res.status(400).json({ error: 'Original doubt text must be 1000 characters or fewer' });
+    return;
+  }
+
   const doubt: Doubt = {
     id: `d-std-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     sessionId: store.session.id,
     text: trimmed,
     timestamp: new Date().toISOString(),
     submittedByStudent: true,
-    originalText: typeof analysis?.underlying_doubt === 'string' ? trimmed : undefined,
+    originalText: originalTrimmed,
     analysisAvailable: analysis?.analysis_available === true,
     tone: typeof analysis?.tone === 'string' ? analysis.tone : undefined,
     intent: typeof analysis?.intent === 'string' ? analysis.intent : undefined,

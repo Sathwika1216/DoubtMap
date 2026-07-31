@@ -122,7 +122,11 @@ export async function clusterDoubts(
   if (getFeatherlessApiKey()) {
     try {
       const doubtListText = doubts
-        .map((d) => `ID: ${d.id} | Doubt: "${d.text}"`)
+        .map((d) => {
+          const conceptualSignal = d.underlyingDoubt || d.rephrasedDoubt || d.text;
+          const originalText = d.originalText || d.text;
+          return `ID: ${d.id} | Original: "${originalText}" | Conceptual Signal: "${conceptualSignal}" | Submitted Version: "${d.text}"`;
+        })
         .join('\n');
 
       const systemPrompt = `You are an educational AI assistant for DoubtMap's semantic analysis engine.
@@ -138,7 +142,8 @@ ${doubtListText}
 
 Guidelines:
 1. Do not perform simple keyword matching. Group by fundamental conceptual misunderstanding.
-2. For each cluster, given the student doubts belonging to that cluster, generate:
+2. Use the "Conceptual Signal" field as the main semantic signal. Ignore surface-level wording differences when they point to the same learning gap.
+3. For each cluster, given the student doubts belonging to that cluster, generate:
    - "label": a short cluster title
    - "description": a simple explanation of the concept gap (1 sentence)
    - "doubtIds": all doubt IDs belonging to this cluster

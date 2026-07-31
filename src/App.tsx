@@ -145,6 +145,7 @@ export default function App() {
 
   const handleSubmitStudentDoubt = async (
     text: string,
+    originalText?: string,
     analysis?: {
       analysis_available?: boolean;
       tone?: string;
@@ -160,7 +161,7 @@ export default function App() {
       const res = await fetch(`/api/sessions/${sessionId}/doubts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, analysis }),
+        body: JSON.stringify({ text, originalText, analysis }),
       });
       if (res.ok) {
         fetchSession(sessionId);
