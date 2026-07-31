@@ -77,7 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
               <h3 className="font-semibold text-white text-sm mb-1">AI SEMANTIC ANALYSIS</h3>
               {/* Bug fix #11: updated model name */}
               <p className="text-xs text-slate-400">
-                Gemini 2.0 Flash understands meaning beyond exact keywords.
+                Featherless AI (DeepSeek-V3.2) understands meaning beyond exact keywords.
               </p>
             </div>
 
@@ -142,7 +142,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchTeacher, onJoi
       {/* Footer */}
       <div className="max-w-6xl mx-auto w-full pt-8 text-center text-xs text-slate-500 border-t border-slate-900 mt-12">
         {/* Bug fix #11: updated model name */}
-        <p>DoubtMap — AI-Powered Live Classroom Intelligence System • Powered by Gemini 2.0 Flash</p>
+        <p>DoubtMap — AI-Powered Live Classroom Intelligence System • Powered by Featherless AI</p>
       </div>
     </div>
   );

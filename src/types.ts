@@ -78,7 +78,7 @@ export interface Session {
   activeGapCount: number;
   studentCount: number;
   lastAnalysisTime?: string;
-  aiEngineMode: 'GEMINI_AI' | 'STANDBY_HYBRID';
+  aiEngineMode: 'FEATHERLESS_AI' | 'STANDBY_HYBRID';
   simulation: SimulationState;
   insight?: TeacherInsight;
 }

@@ -87,7 +87,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Streaming binary search tree doubts into Gemini semantic clustering pipeline.
+              Streaming binary search tree doubts into Featherless semantic clustering pipeline.
             </p>
           </div>
         </div>

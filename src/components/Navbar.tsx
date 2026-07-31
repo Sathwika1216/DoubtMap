@@ -6,7 +6,7 @@ interface NavbarProps {
   onViewChange: (view: 'landing' | 'teacher' | 'student') => void;
   roomCode?: string;
   lessonTitle?: string;
-  aiMode?: 'GEMINI_AI' | 'STANDBY_HYBRID';
+  aiMode?: 'FEATHERLESS_AI' | 'STANDBY_HYBRID';
   onOpenCreateSession: () => void;
   onOpenSummary: () => void;
 }
@@ -16,7 +16,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onViewChange,
   roomCode = 'DM-4821',
   lessonTitle = 'Binary Search Trees',
-  aiMode = 'GEMINI_AI',
+  aiMode = 'FEATHERLESS_AI',
   onOpenCreateSession,
   onOpenSummary,
 }) => {
@@ -86,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-indigo-300">
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
               {/* Bug fix #11: updated model label */}
-              <span>{aiMode === 'GEMINI_AI' ? 'Gemini 2.0 Flash' : 'Standby Engine'}</span>
+              <span>{aiMode === 'FEATHERLESS_AI' ? 'Featherless DeepSeek-V3.2' : 'Standby Engine'}</span>
             </div>
           </div>
         )}

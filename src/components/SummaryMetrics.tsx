@@ -6,7 +6,7 @@ interface SummaryMetricsProps {
   activeGapCount: number;
   studentCount: number;
   lastAnalysisTime?: string;
-  aiMode?: 'GEMINI_AI' | 'STANDBY_HYBRID';
+  aiMode?: 'FEATHERLESS_AI' | 'STANDBY_HYBRID';
 }
 
 export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
@@ -14,7 +14,7 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   activeGapCount,
   studentCount,
   lastAnalysisTime,
-  aiMode = 'GEMINI_AI',
+  aiMode = 'FEATHERLESS_AI',
 }) => {
   const [secondsAgo, setSecondsAgo] = React.useState<number>(0);
 
@@ -107,7 +107,7 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
           <p className="text-[10px] text-amber-500 font-bold uppercase tracking-tighter flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-400" />
             {/* Bug fix #11: updated model name label */}
-            <span>{aiMode === 'GEMINI_AI' ? 'Gemini 2.0 Flash' : 'Standby Engine'}</span>
+            <span>{aiMode === 'FEATHERLESS_AI' ? 'Featherless DeepSeek-V3.2' : 'Standby Engine'}</span>
           </p>
         </div>
         <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shadow-inner">

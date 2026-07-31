@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
@@ -47,7 +48,7 @@ function createDefaultDemoSession(): SessionStore {
     activeGapCount: 0,
     studentCount: 76,
     lastAnalysisTime: new Date().toISOString(),
-    aiEngineMode: 'GEMINI_AI',
+    aiEngineMode: 'FEATHERLESS_AI',
     simulation: {
       isRunning: false,
       isPaused: false,
@@ -161,7 +162,7 @@ app.post('/api/sessions', async (req, res) => {
     doubtCount: 0,
     activeGapCount: 0,
     studentCount: Math.floor(25 + Math.random() * 50),
-    aiEngineMode: 'GEMINI_AI',
+    aiEngineMode: 'FEATHERLESS_AI',
     simulation: {
       isRunning: false,
       isPaused: false,
@@ -216,7 +217,7 @@ app.get('/api/sessions/:id', (req, res) => {
     topGapLabel: topCluster ? topCluster.label : 'None',
     topGapDoubtCount: topCluster ? topCluster.count : 0,
     fastestGrowingGap: topCluster ? topCluster.label : 'None',
-    avgProcessingTimeMs: store.session.aiEngineMode === 'GEMINI_AI' ? 620 : 120,
+    avgProcessingTimeMs: store.session.aiEngineMode === 'FEATHERLESS_AI' ? 620 : 120,
   };
 
   const responseData: SessionFullData = {
