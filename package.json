@@ -12,7 +12,6 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^2.15.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^5.2.0",
     "dotenv": "^17.4.2",
@@ -31,5 +30,8 @@
     "tsx": "^4.23.1",
     "typescript": "~5.8.2",
     "vite": "^6.4.3"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-win32-x64-msvc": "^4.3.3"
   }
 }

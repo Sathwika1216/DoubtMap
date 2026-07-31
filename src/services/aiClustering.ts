@@ -1,5 +1,5 @@
-import { GoogleGenAI, Type } from '@google/genai';
 import { Doubt, Cluster, HeatLevel, TrendDirection } from '../types.js';
+import { featherlessChatJson, getFeatherlessApiKey } from './featherless.js';
 
 // Category metadata for local fallback clustering
 const CATEGORY_MAP: Record<string, { label: string; description: string; explanation: string }> = {
@@ -52,13 +52,50 @@ function stableClusterId(label: string, sessionId: string): string {
   return `c-ai-${Math.abs(hash).toString(36)}-${sessionId.slice(0, 4)}`;
 }
 
+function buildSemanticExplanation(parts: {
+  explanation?: string;
+  misconceptions?: string;
+  keyConcepts?: string;
+  nextTopic?: string;
+  fallback?: string;
+}): string {
+  const explanation = (parts.explanation || parts.fallback || '').trim();
+  const misconceptions = (parts.misconceptions || '').trim();
+  const keyConcepts = (parts.keyConcepts || '').trim();
+  const nextTopic = (parts.nextTopic || '').trim();
+
+  const sections: string[] = [];
+  if (explanation) sections.push(explanation);
+  if (misconceptions) sections.push(`Common misconceptions: ${misconceptions}`);
+  if (keyConcepts) sections.push(`Key concepts to study: ${keyConcepts}`);
+  if (nextTopic) sections.push(`Suggested next topic: ${nextTopic}`);
+
+  return sections.join('\n\n') || 'Related student doubts share a common conceptual gap.';
+}
+
+interface AiClusterPayload {
+  clusters?: Array<{
+    label?: string;
+    description?: string;
+    doubtIds?: string[];
+    representativeDoubts?: string[];
+    semanticExplanation?: string;
+    explanation?: string;
+    misconceptions?: string;
+    keyConcepts?: string;
+    nextTopic?: string;
+    heat?: string;
+    trend?: string;
+  }>;
+}
+
 export async function clusterDoubts(
   doubts: Doubt[],
   sessionId: string,
   previousClusters: Cluster[] = []
-): Promise<{ clusters: Cluster[]; mode: 'GEMINI_AI' | 'STANDBY_HYBRID' }> {
+): Promise<{ clusters: Cluster[]; mode: 'FEATHERLESS_AI' | 'STANDBY_HYBRID' }> {
   if (doubts.length === 0) {
-    return { clusters: [], mode: 'GEMINI_AI' };
+    return { clusters: [], mode: 'FEATHERLESS_AI' };
   }
 
   // Handle Low Data state (< 6 doubts)
@@ -78,28 +115,21 @@ export async function clusterDoubts(
       representativeDoubts: doubts.map((d) => d.text).slice(0, 3),
       semanticExplanation: 'The AI engine is monitoring incoming questions and will cluster them into conceptual patterns once sufficient classroom volume is accumulated.',
     };
-    return { clusters: [lowDataCluster], mode: 'GEMINI_AI' };
+    return { clusters: [lowDataCluster], mode: 'FEATHERLESS_AI' };
   }
 
-  // Attempt Real Gemini AI Clustering
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim().length > 0) {
+  // Attempt Featherless AI Clustering
+  if (getFeatherlessApiKey()) {
     try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          },
-        },
-      });
-
       const doubtListText = doubts
         .map((d) => `ID: ${d.id} | Doubt: "${d.text}"`)
         .join('\n');
 
-      const prompt = `
-You are DoubtMap's AI Semantic Analysis Engine for a computer science lecture on Binary Search Trees (BSTs).
+      const systemPrompt = `You are an educational AI assistant for DoubtMap's semantic analysis engine.
+You group student doubts into conceptual clusters and generate clear learning guidance.
+Always respond with valid JSON only. No markdown, no commentary.`;
+
+      const userPrompt = `You are DoubtMap's AI Semantic Analysis Engine for a computer science lecture on Binary Search Trees (BSTs).
 Analyze the following list of ${doubts.length} anonymous student doubts.
 Group them semantically into 3 to 5 distinct, high-impact conceptual gaps.
 
@@ -108,140 +138,124 @@ ${doubtListText}
 
 Guidelines:
 1. Do not perform simple keyword matching. Group by fundamental conceptual misunderstanding.
-2. For each cluster:
-   - Provide a clear, short, actionable title (e.g. "Deletion Cases & In-Order Successor").
-   - Provide a 1-sentence description of the concept gap.
-   - List all doubt IDs belonging to this cluster.
-   - Pick 2 to 3 representative student doubt strings.
-   - Provide a 2-sentence "semanticExplanation" highlighting how differently-worded doubts (e.g., asking about the 3 cases vs. what is the in-order successor vs. can I use the predecessor) share the exact same underlying conceptual gap.
-   - Set "heat" level ("LOW", "MEDIUM", "HIGH", "CRITICAL") based on proportion and urgency.
-   - Set "trend" ("UP", "STABLE", "DOWN").
+2. For each cluster, given the student doubts belonging to that cluster, generate:
+   - "label": a short cluster title
+   - "description": a simple explanation of the concept gap (1 sentence)
+   - "doubtIds": all doubt IDs belonging to this cluster
+   - "representativeDoubts": 2 to 3 representative student doubt strings
+   - "explanation": a short learning summary / simple explanation (2 sentences) highlighting how differently-worded doubts share the same underlying conceptual gap
+   - "misconceptions": common misconceptions students hold about this topic
+   - "keyConcepts": key concepts students should study
+   - "nextTopic": suggested next topic
+   - "heat": "LOW", "MEDIUM", "HIGH", or "CRITICAL" based on proportion and urgency
+   - "trend": "UP", "STABLE", or "DOWN"
+3. Also include "semanticExplanation" as a concise teacher-facing summary of the gap.
 
-Respond strictly in JSON format.
-`;
+Return JSON only in this exact shape:
+{
+  "clusters": [
+    {
+      "label": "...",
+      "description": "...",
+      "doubtIds": ["..."],
+      "representativeDoubts": ["..."],
+      "explanation": "...",
+      "misconceptions": "...",
+      "keyConcepts": "...",
+      "nextTopic": "...",
+      "semanticExplanation": "...",
+      "heat": "MEDIUM",
+      "trend": "STABLE"
+    }
+  ]
+}`;
 
-      // Bug fix #1: corrected model name from the non-existent 'gemini-3.6-flash'
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              clusters: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    label: { type: Type.STRING },
-                    description: { type: Type.STRING },
-                    doubtIds: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING },
-                    },
-                    representativeDoubts: {
-                      type: Type.ARRAY,
-                      items: { type: Type.STRING },
-                    },
-                    semanticExplanation: { type: Type.STRING },
-                    heat: {
-                      type: Type.STRING,
-                      description: 'LOW, MEDIUM, HIGH, or CRITICAL',
-                    },
-                    trend: {
-                      type: Type.STRING,
-                      description: 'UP, STABLE, or DOWN',
-                    },
-                  },
-                  required: [
-                    'label',
-                    'description',
-                    'doubtIds',
-                    'representativeDoubts',
-                    'semanticExplanation',
-                    'heat',
-                    'trend',
-                  ],
-                },
-              },
-            },
-            required: ['clusters'],
-          },
-        },
+      const parsed = await featherlessChatJson<AiClusterPayload>(systemPrompt, userPrompt, {
+        temperature: 0.3,
+        maxTokens: 4096,
       });
 
-      if (response.text) {
-        const parsed = JSON.parse(response.text);
-        if (parsed.clusters && Array.isArray(parsed.clusters) && parsed.clusters.length > 0) {
-          const totalCount = doubts.length;
+      if (parsed.clusters && Array.isArray(parsed.clusters) && parsed.clusters.length > 0) {
+        const totalCount = doubts.length;
 
-          // Preserve addressed status if previous cluster had same label
-          const addressedMap = new Map<string, { addressed: boolean; addressedAt?: string }>();
-          for (const prev of previousClusters) {
-            addressedMap.set(prev.label.toLowerCase(), {
-              addressed: prev.addressed,
-              addressedAt: prev.addressedAt,
-            });
+        // Preserve addressed status if previous cluster had same label
+        const addressedMap = new Map<string, { addressed: boolean; addressedAt?: string }>();
+        for (const prev of previousClusters) {
+          addressedMap.set(prev.label.toLowerCase(), {
+            addressed: prev.addressed,
+            addressedAt: prev.addressedAt,
+          });
+        }
+
+        const formattedClusters: Cluster[] = parsed.clusters.map((c) => {
+          const count = c.doubtIds?.length || 1;
+          const percentage = Math.round((count / totalCount) * 100);
+          const prevAddressed = addressedMap.get((c.label || '').toLowerCase());
+
+          let heatLevel: HeatLevel = 'MEDIUM';
+          if (['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(c.heat?.toUpperCase() || '')) {
+            heatLevel = c.heat!.toUpperCase() as HeatLevel;
+          } else if (percentage >= 30) {
+            heatLevel = 'CRITICAL';
+          } else if (percentage >= 20) {
+            heatLevel = 'HIGH';
+          } else if (percentage >= 10) {
+            heatLevel = 'MEDIUM';
+          } else {
+            heatLevel = 'LOW';
           }
 
-          const formattedClusters: Cluster[] = parsed.clusters.map((c: any) => {
-            const count = c.doubtIds?.length || 1;
-            const percentage = Math.round((count / totalCount) * 100);
-            const prevAddressed = addressedMap.get(c.label.toLowerCase());
+          let trend: TrendDirection = 'STABLE';
+          if (['UP', 'STABLE', 'DOWN'].includes(c.trend?.toUpperCase() || '')) {
+            trend = c.trend!.toUpperCase() as TrendDirection;
+          }
 
-            let heatLevel: HeatLevel = 'MEDIUM';
-            if (['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(c.heat?.toUpperCase())) {
-              heatLevel = c.heat.toUpperCase() as HeatLevel;
-            } else if (percentage >= 30) {
-              heatLevel = 'CRITICAL';
-            } else if (percentage >= 20) {
-              heatLevel = 'HIGH';
-            } else if (percentage >= 10) {
-              heatLevel = 'MEDIUM';
-            } else {
-              heatLevel = 'LOW';
-            }
+          const heatScoreMap: Record<HeatLevel, number> = {
+            CRITICAL: 90 + Math.min(percentage, 10),
+            HIGH: 70 + Math.min(percentage, 15),
+            MEDIUM: 45 + Math.min(percentage, 20),
+            LOW: 20 + Math.min(percentage, 20),
+          };
 
-            let trend: TrendDirection = 'STABLE';
-            if (['UP', 'STABLE', 'DOWN'].includes(c.trend?.toUpperCase())) {
-              trend = c.trend.toUpperCase() as TrendDirection;
-            }
+          const label = (c.label || 'Conceptual Gap').trim();
+          if (!label) {
+            throw new Error('Featherless returned a cluster with an empty title');
+          }
 
-            const heatScoreMap: Record<HeatLevel, number> = {
-              CRITICAL: 90 + Math.min(percentage, 10),
-              HIGH: 70 + Math.min(percentage, 15),
-              MEDIUM: 45 + Math.min(percentage, 20),
-              LOW: 20 + Math.min(percentage, 20),
-            };
+          // Bug fix #4: use stable ID derived from label, not array index
+          return {
+            id: stableClusterId(label, sessionId),
+            sessionId,
+            label,
+            description: (c.description || c.explanation || '').trim() || 'Related student doubts share a concept gap.',
+            doubtIds: c.doubtIds || [],
+            count,
+            percentage,
+            heat: heatLevel,
+            heatScore: heatScoreMap[heatLevel],
+            trend,
+            addressed: prevAddressed?.addressed || false,
+            addressedAt: prevAddressed?.addressedAt,
+            representativeDoubts: c.representativeDoubts || [],
+            semanticExplanation: buildSemanticExplanation({
+              explanation: c.explanation || c.semanticExplanation,
+              misconceptions: c.misconceptions,
+              keyConcepts: c.keyConcepts,
+              nextTopic: c.nextTopic,
+              fallback: c.semanticExplanation,
+            }),
+          };
+        });
 
-            // Bug fix #4: use stable ID derived from label, not array index
-            return {
-              id: stableClusterId(c.label, sessionId),
-              sessionId,
-              label: c.label,
-              description: c.description,
-              doubtIds: c.doubtIds || [],
-              count,
-              percentage,
-              heat: heatLevel,
-              heatScore: heatScoreMap[heatLevel],
-              trend,
-              addressed: prevAddressed?.addressed || false,
-              addressedAt: prevAddressed?.addressedAt,
-              representativeDoubts: c.representativeDoubts || [],
-              semanticExplanation: c.semanticExplanation,
-            };
-          });
+        // Sort clusters by count/heat descending
+        formattedClusters.sort((a, b) => b.count - a.count);
 
-          // Sort clusters by count/heat descending
-          formattedClusters.sort((a, b) => b.count - a.count);
-
-          return { clusters: formattedClusters, mode: 'GEMINI_AI' };
-        }
+        return { clusters: formattedClusters, mode: 'FEATHERLESS_AI' };
       }
+
+      console.warn('Featherless AI clustering returned empty or invalid clusters; using standby fallback.');
     } catch (err) {
-      console.warn('Gemini API clustering fallback triggered:', err);
+      console.warn('Featherless AI clustering fallback triggered:', err);
     }
   }
 
@@ -373,24 +387,16 @@ export async function generateTeacherInsight(
     };
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim().length > 0) {
+  if (getFeatherlessApiKey()) {
     try {
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          },
-        },
-      });
-
       const clusterSummaryText = activeClusters
         .map((c) => `- ${c.label} (${c.count} doubts, ${c.percentage}% of class): ${c.description}`)
         .join('\n');
 
-      const prompt = `
-You are DoubtMap's AI Decision Support Assistant for a teacher giving a lecture on "${sessionTitle}".
+      const systemPrompt = `You are DoubtMap's AI Decision Support Assistant.
+Always respond with valid JSON only. No markdown, no commentary.`;
+
+      const userPrompt = `You are helping a teacher giving a lecture on "${sessionTitle}".
 Here are the current unresolved conceptual gaps identified from ${totalDoubts} student questions:
 ${clusterSummaryText}
 
@@ -399,36 +405,30 @@ Respond in JSON format with fields:
 {
   "summary": "1 sentence describing the single biggest misconception bottleneck",
   "actionableAdvice": "1 sentence with a specific teaching intervention (e.g. diagram, analogy, step-by-step example)"
-}
-`;
+}`;
 
-      // Bug fix #1: corrected model name
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              actionableAdvice: { type: Type.STRING },
-            },
-            required: ['summary', 'actionableAdvice'],
-          },
-        },
+      const parsed = await featherlessChatJson<{
+        summary?: string;
+        actionableAdvice?: string;
+      }>(systemPrompt, userPrompt, {
+        temperature: 0.3,
+        maxTokens: 1024,
       });
 
-      if (response.text) {
-        const parsed = JSON.parse(response.text);
-        return {
-          summary: parsed.summary,
-          actionableAdvice: parsed.actionableAdvice,
-          topConfusions: defaultTopConfusions,
-        };
+      const summary = parsed.summary?.trim();
+      const actionableAdvice = parsed.actionableAdvice?.trim();
+
+      if (!summary || !actionableAdvice) {
+        throw new Error('Featherless returned empty teacher insight fields');
       }
+
+      return {
+        summary,
+        actionableAdvice,
+        topConfusions: defaultTopConfusions,
+      };
     } catch (err) {
-      console.warn('Gemini teacher insight fallback triggered:', err);
+      console.warn('Featherless teacher insight fallback triggered:', err);
     }
   }
 
