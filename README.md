@@ -69,3 +69,9 @@ npm run lint    # TypeScript check
 - **Used for:** cluster titles, explanations, learning summaries, common misconceptions, suggested next topics, and teacher insights
 
 Clustering grouping logic, embeddings/graph behavior, routing, auth, and UI layout are unchanged — only the LLM provider was swapped from Gemini to Featherless.
+
+## DoubtTone AI (planned)
+
+DoubtTone AI will analyze the **learning intent** behind student doubts (including frustrated/rude wording) before they enter clustering — without acting as a moderation system. Integration plan and architecture notes:
+
+→ [`docs/DOUBTTONE_ARCHITECTURE.md`](docs/DOUBTTONE_ARCHITECTURE.md)
