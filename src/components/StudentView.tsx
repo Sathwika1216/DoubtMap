@@ -250,9 +250,14 @@ export const StudentView: React.FC<StudentViewProps> = ({
                 </div>
 
                 {analyzing && (
-                  <div className="flex items-center gap-2 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-                    <Sparkles className="w-4 h-4 animate-pulse" />
-                    <span>✨ Understanding your doubt...</span>
+                  <div className="space-y-2 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 animate-pulse" />
+                      <span>✨ Understanding your doubt...</span>
+                    </div>
+                    <div className="pl-6 text-slate-300">
+                      Identifying the learning intent...
+                    </div>
                   </div>
                 )}
 
